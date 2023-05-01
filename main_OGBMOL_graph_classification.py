@@ -292,7 +292,6 @@ def train_val_pipeline(MODEL_NAME, dataset, params, net_params, dirs):
         Convergence Time (Epochs): {:.4f}\nTotal Time Taken: {:.4f} hrs\nAverage Time Per Epoch: {:.4f} s\n\n\n"""\
               .format(DATASET_NAME, MODEL_NAME, params, net_params, model, net_params['total_param'],
                       test_acc, train_acc, val_acc, epoch, (time.time()-t0)/3600, np.mean(per_epoch_time)))
-    wandb.finish()
 
 
 
@@ -494,6 +493,7 @@ def main():
             entity=args.wandb_entity,
             name=args.wandb_run_name, config=config, save_code=True)
     train_val_pipeline(MODEL_NAME, dataset, params, net_params, dirs)
+    wandb.finish()
 
     
     
