@@ -348,8 +348,8 @@ def main():
     #Wandb args
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--wandb_entity", type=str, default="marcushandley")
-    parser.add_argument("--wandb_project", type=str, default="Part II")
-    parser.add_argument("--wandb_run_name", type=str, default="proto_zinc")
+    parser.add_argument("--wandb_project", type=str, default="Part-II-pytorch-OGBMOL")
+    parser.add_argument("--wandb_run_name", type=str, default="MOLTOX21")
     parser.add_argument("--print_every", type=int, default=100)
     args = parser.parse_args()
 
