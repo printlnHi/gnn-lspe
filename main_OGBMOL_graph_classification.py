@@ -23,8 +23,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from tensorboardX import SummaryWriter
 from tqdm import tqdm
+import wandb
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -126,7 +126,6 @@ def train_val_pipeline(MODEL_NAME, dataset, params, net_params, dirs):
         f.write("""Dataset: {},\nModel: {}\n\nparams={}\n\nnet_params={}\n\n\nTotal Parameters: {}\n\n"""                .format(DATASET_NAME, MODEL_NAME, params, net_params, net_params['total_param']))
         
     log_dir = os.path.join(root_log_dir, "RUN_" + str(0))
-    writer = SummaryWriter(log_dir=log_dir)
 
     # setting seeds
     random.seed(params['seed'])
@@ -182,13 +181,11 @@ def train_val_pipeline(MODEL_NAME, dataset, params, net_params, dirs):
                 epoch_val_accs.append(epoch_val_acc)
                 epoch_test_accs.append(epoch_test_acc)
 
-                writer.add_scalar('train/_loss', epoch_train_loss, epoch)
-                writer.add_scalar('val/_loss', epoch_val_loss, epoch)
-                writer.add_scalar('train/_avg_prec', epoch_train_acc, epoch)
-                writer.add_scalar('val/_avg_prec', epoch_val_acc, epoch)
-                writer.add_scalar('test/_avg_prec', epoch_test_acc, epoch)
-                writer.add_scalar('learning_rate', optimizer.param_groups[0]['lr'], epoch)
-                        
+                wandb.log({"train loss": epoch_train_loss, "val loss": epoch_val_loss,
+                           "train acc": epoch_train_acc, "val acc": epoch_val_acc,
+                           "test acc": epoch_test_acc, "lr": optimizer.param_groups[0]['lr'],
+                           "epoch": epoch})
+
                 if dataset.name == "ogbg-moltox21":
                     t.set_postfix(time=time.time()-start, lr=optimizer.param_groups[0]['lr'],
                                   train_loss=epoch_train_loss, val_loss=epoch_val_loss,
@@ -277,7 +274,6 @@ def train_val_pipeline(MODEL_NAME, dataset, params, net_params, dirs):
 
             f.savefig(viz_dir+'/test'+str(graph_id)+'.jpg')    
 
-    writer.close()
 
     """
         Write the results in out_dir/results folder
@@ -296,7 +292,7 @@ def train_val_pipeline(MODEL_NAME, dataset, params, net_params, dirs):
         Convergence Time (Epochs): {:.4f}\nTotal Time Taken: {:.4f} hrs\nAverage Time Per Epoch: {:.4f} s\n\n\n"""\
               .format(DATASET_NAME, MODEL_NAME, params, net_params, model, net_params['total_param'],
                       test_acc, train_acc, val_acc, epoch, (time.time()-t0)/3600, np.mean(per_epoch_time)))
-
+    wandb.finish()
 
 
 
@@ -348,7 +344,15 @@ def main():
     parser.add_argument('--alpha_loss', help="Please give a value for alpha_loss")
     parser.add_argument('--lambda_loss', help="Please give a value for lambda_loss")
     parser.add_argument('--pe_init', help="Please give a value for pe_init")
+
+    #Wandb args
+    parser.add_argument("--wandb", action="store_true")
+    parser.add_argument("--wandb_entity", type=str, default="marcushandley")
+    parser.add_argument("--wandb_project", type=str, default="Part II")
+    parser.add_argument("--wandb_run_name", type=str, default="proto_zinc")
+    parser.add_argument("--print_every", type=int, default=100)
     args = parser.parse_args()
+
     with open(args.config) as f:
         config = json.load(f)
     # device
@@ -477,6 +481,15 @@ def main():
         os.makedirs(out_dir + 'configs')
 
     net_params['total_param'] = view_model_param(MODEL_NAME, net_params)
+
+    if args.wandb:
+        pe_init = net_params["pe_init"]
+        if net_params['use_lapeig_loss']:
+            pe_init += "lapeig_loss"
+        run = wandb.init(
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            name=args.wandb_run_name, config=params | net_params | {'pe_init': pe_init}, save_code=True)
     train_val_pipeline(MODEL_NAME, dataset, params, net_params, dirs)
 
     
