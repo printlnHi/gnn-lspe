@@ -486,10 +486,13 @@ def main():
         pe_init = net_params["pe_init"]
         if net_params['use_lapeig_loss']:
             pe_init += "lapeig_loss"
+        config = {"pe_init":pe_init}
+        config.update(params)
+        config.update(net_params)
         run = wandb.init(
             project=args.wandb_project,
             entity=args.wandb_entity,
-            name=args.wandb_run_name, config=params | net_params | {'pe_init': pe_init}, save_code=True)
+            name=args.wandb_run_name, config=config, save_code=True)
     train_val_pipeline(MODEL_NAME, dataset, params, net_params, dirs)
 
     
